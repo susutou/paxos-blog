@@ -16,6 +16,7 @@ import collections
 #
 ProposalID = collections.namedtuple('ProposalID', ['number', 'uid'])
 
+
 class Messenger(object):
     def send_prepare(self, proposal_id):
         '''
