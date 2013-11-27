@@ -3,7 +3,6 @@ import collections
 BallotNum = collections.namedtuple("BallotNum", ['number', 'uid'])
 
 
-
 class Message (object):
 
     # Message Types
@@ -11,7 +10,6 @@ class Message (object):
     MSG_PROMISE = 1
     MSG_ACCEPT = 2
     MSG_DECIDE = 3
-
 
     def __init__(self):
         self.type = None
@@ -22,8 +20,6 @@ class Message (object):
         self.accepted_bal = None
         self.accepted_value = None
 
-
-
     def send_prepare(self, source_uid, destination_uid, ballot_num):
         """
         Broadcast a "prepare" message to all acceptors
@@ -32,8 +28,6 @@ class Message (object):
         self.source = source_uid
         self.destination = destination_uid
         self.ballot_num = ballot_num
-
-
 
     def send_promise(self, source_uid, destination_uid, ballot_num, accepted_bal, accepted_value):
         """
@@ -46,8 +40,6 @@ class Message (object):
         self.accepted_bal = accepted_bal
         self.accepted_value = accepted_value
 
-
-
     def send_accept(self, source_uid, destination_uid, ballot_num, proposal_value):
         """
         Broadcast an "accept" message to all acceptors
@@ -58,8 +50,6 @@ class Message (object):
         self.ballot_num = ballot_num
         self.proposal_value = proposal_value
 
-
-
     def send_decide(self, source_uid, destination_uid, ballot_num, accepted_value):
         """
         Periodically broadcast decision value to all
@@ -69,9 +59,6 @@ class Message (object):
         self.destination = destination_uid
         self.ballot_num = ballot_num
         self.accepted_value = accepted_value
-
-
-
 
 
 class Proposer (object):
@@ -98,8 +85,6 @@ class Proposer (object):
         self.promises_received = set()
         self.agree_cnt = 0
 
-
-
     def send_prepare_request(self):
         """
         Send a "prepare" request to all, initiating the PAXOS consensus algorithm
@@ -114,8 +99,6 @@ class Proposer (object):
 
         # Transit to STATE_PROPOSED after proposed
         self.state = Proposer.STATE_PROPOSED
-
-
 
     def receive_prepare_ack(self, message):
         """
@@ -146,8 +129,6 @@ class Proposer (object):
                 # Transit to STATE_UNACCEPTED
                 self.state = Proposer.STATE_UNDEFINED
 
-
-
     def state_transition(self, message):
         """
         Proposer's State Machine
@@ -159,10 +140,6 @@ class Proposer (object):
             return
         elif self.state == Proposer.STATE_PROPOSED and message.MSG_PROMISE:
             self.receive_prepare_ack(message)
-
-
-
-
 
 
 class Acceptor (object):
@@ -192,7 +169,6 @@ class Acceptor (object):
         self.accepted_cnt = set()
         self.has_broadcast_accept_msg = False
 
-
     def receive_prepare_request(self, message):
         """
         Receive a "prepare" request message from a Proposer
@@ -206,8 +182,6 @@ class Acceptor (object):
             self.ballot_num = message.ballot_num
             self.message.send_promise(self.acceptor_uid, message.source, message.ballot_num, self.accepted_bal, self.accepted_value)
             self.state = Acceptor.STATE_PROPOSAL_RECEIVED
-
-
 
     def receive_accept_request(self, message):
         """
@@ -237,9 +211,6 @@ class Acceptor (object):
                     self.message.send_decide(self.acceptor_uid, server.acceptor_uid, self.accepted_bal, self.accepted_value)
                 self.accepted_cnt.clear()
                 self.state = Acceptor.STATE_PROPOSAL_DECIDED
-
-
-
 
     def state_transition(self, message):
         """
