@@ -2,6 +2,11 @@ import socket
 import threading
 import queue
 import pickle
+import collections
+import time
+
+# Message type
+Message = collections.namedtuple("Message", ['src', 'to'])
 
 
 class Server(threading.Thread):
@@ -20,6 +25,8 @@ class Server(threading.Thread):
                     msg = pickle.loads(data)
                     self.owner.queue.put(msg)
                 except queue.Full:
+                    print('The message queue is full.')
+                except socket.timeout:
                     pass
 
     def __init__(self, port, address='localhost', timeout=2):
@@ -39,6 +46,8 @@ class Server(threading.Thread):
         self.listener.start()
         while not self.abort:
             message = self.wait_for_message()
+            if message is not None:
+                print('Server at port {port} receiving message {msg}.'.format(port=self.port, msg=message))
             # self.owner.recv_message(message)
 
     def wait_for_message(self):
@@ -46,7 +55,7 @@ class Server(threading.Thread):
             msg = self.queue.get(True, 3)  # timeout
             return msg
         except queue.Empty:
-            pass
+            print('The message queue is empty.')
 
     def send_message(self, message):
         data = pickle.dumps(message)
@@ -57,3 +66,16 @@ class Server(threading.Thread):
 
     def do_abort(self):
         self.abort = True
+
+if __name__ == '__main__':
+    a = Server(60000)
+    b = Server(60001)
+
+    a.start()
+    b.start()
+
+    a.send_message(Message('a', b.port))
+    b.send_message(Message('b', a.port))
+
+    time.sleep(2)
+    a.send_message(Message('a', b.port))

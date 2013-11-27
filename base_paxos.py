@@ -2,6 +2,7 @@
 Initial import from essential Paxos
 """
 import collections
+from network import Message, Server
 
 # In order for the Paxos algorithm to function, all proposal ids must be
 # unique. A simple way to ensure this is to include the proposer's UID
