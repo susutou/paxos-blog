@@ -1,10 +1,10 @@
 import collections
+from network import Server
 
 BallotNum = collections.namedtuple("BallotNum", ['number', 'uid'])
 
 
 class Message (object):
-
     # Message Types
     MSG_PREPARE = 0
     MSG_PROMISE = 1
@@ -67,7 +67,7 @@ class Proposer (object):
     STATE_UNDEFINED = -1
     STATE_PROPOSED = 0
 
-    def __init__(self, proposer_uid, servers = None):
+    def __init__(self, proposer_uid, servers=None):
         self.proposer_uid = proposer_uid
         self.servers = servers or []
         # 5 servers
