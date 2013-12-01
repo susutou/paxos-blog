@@ -39,7 +39,8 @@ class Messenger(object):
         """
         Sends a Promise message to the specified Proposer
         """
-        msg = Message(Message.MSG_PROMISE, self.owner.server.port, proposer_uid, data=(proposal_id, previous_id, accepted_value))
+        msg = Message(
+            Message.MSG_PROMISE, self.owner.server.port, proposer_uid, data=(proposal_id, previous_id, accepted_value))
         self.owner.server.send_message(msg)
 
     def send_accept(self, proposal_id, proposal_value):
@@ -260,3 +261,8 @@ if __name__ == '__main__':
 
     proposers[0].prepare()
     proposers[1].prepare()
+
+    time.sleep(5)
+
+    proposers[0].set_proposal('p1-x')
+    proposers[0].prepare()
