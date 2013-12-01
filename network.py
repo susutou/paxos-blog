@@ -6,7 +6,23 @@ import collections
 import time
 
 # Message type
-Message = collections.namedtuple("Message", ['src', 'to'])
+# Message = collections.namedtuple("Message", ['src', 'to'])
+
+
+class Message(object):
+    # Message Types
+    MSG_PREPARE = 0
+    MSG_PROMISE = 1
+    MSG_ACCEPT = 2
+    MSG_DECIDE = 3
+
+    MSG_TYPE = ['MSG_PREPARE', 'MSG_PROMISE', 'MSG_ACCEPT', 'MSG_DECIDE']
+
+    def __init__(self, message_type, src, to, data=None):
+        self.type = message_type
+        self.src = src
+        self.to = to
+        self.data = data
 
 
 class Server(threading.Thread):
@@ -25,12 +41,14 @@ class Server(threading.Thread):
                     msg = pickle.loads(data)
                     self.owner.queue.put(msg)
                 except queue.Full:
-                    print('The message queue is full.')
+                    # print('The message queue is full.')
+                    pass
                 except socket.timeout:
                     pass
 
-    def __init__(self, port, address='localhost', timeout=2):
+    def __init__(self, owner, port, address='localhost', timeout=2):
         threading.Thread.__init__(self)
+        self.owner = owner
         self.port = port
         self.address = address
         self.timeout = timeout
@@ -46,16 +64,20 @@ class Server(threading.Thread):
         self.listener.start()
         while not self.abort:
             message = self.wait_for_message()
-            if message is not None:
+            if message is not None and isinstance(message, Message):
                 print('Server at port {port} receiving message {msg}.'.format(port=self.port, msg=message))
-            # self.owner.recv_message(message)
+                print('Message type: {t}, content: {c}'.format(t=Message.MSG_TYPE[message.type], c=message.data))
+
+                # let the owner keep receiving message and decide what to do
+                self.owner.recv_message(message)
 
     def wait_for_message(self):
         try:
             msg = self.queue.get(True, 3)  # timeout
             return msg
         except queue.Empty:
-            print('The message queue is empty.')
+            # print('The message queue is empty.')
+            pass
 
     def send_message(self, message):
         data = pickle.dumps(message)
@@ -68,14 +90,14 @@ class Server(threading.Thread):
         self.abort = True
 
 if __name__ == '__main__':
-    a = Server(60000)
-    b = Server(60001)
+    a = Server(60000, None)
+    b = Server(60001, None)
 
     a.start()
     b.start()
 
-    a.send_message(Message('a', b.port))
-    b.send_message(Message('b', a.port))
+    a.send_message(Message(Message.MSG_PREPARE, 'a', b.port))
+    b.send_message(Message(Message.MSG_PROMISE, 'b', a.port))
 
     time.sleep(2)
-    a.send_message(Message('a', b.port))
+    b.send_message(Message(Message.MSG_ACCEPT, 'b', a.port))
