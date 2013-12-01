@@ -62,7 +62,7 @@ class Messenger(object):
         """
         Called when a resolution is reached
         """
-        print('Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner, pid=proposal_id))
+        print('\n! Value {v} is accepted by {o}, proposed by {pid}.\n'.format(v=value, o=self.owner, pid=proposal_id))
 
 
 class Proposer(object):

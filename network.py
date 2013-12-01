@@ -4,6 +4,7 @@ import queue
 import pickle
 import collections
 import time
+import random
 
 # Message type
 # Message = collections.namedtuple("Message", ['src', 'to'])
@@ -82,6 +83,7 @@ class Server(threading.Thread):
     def send_message(self, message):
         data = pickle.dumps(message)
         address = (self.address, message.to)
+        time.sleep(0.01 * random.randrange(0, 10))
         self.socket.sendto(data, address)
         # success
         return True
