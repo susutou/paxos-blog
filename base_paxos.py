@@ -6,6 +6,7 @@ import pickle
 import time
 import queue
 import threading
+import sys
 from network import Message, Server
 
 # In order for the Paxos algorithm to function, all proposal ids must be
@@ -27,8 +28,8 @@ ACCEPTOR_PORT = NODE_PORT + 2
 LEARNER_PORT = NODE_PORT + 3
 
 # 0, 1, 2 => California, 3 => Virginia, 4 => Oregon
-# SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
-SERVER_ADDRESSES = ['localhost' for _ in range(5)]
+SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
+# SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 
 
 class Messenger(object):
@@ -359,12 +360,22 @@ class Node(threading.Thread):
 
 if __name__ == '__main__':
 
-    nodes = [Node(i, SERVER_ADDRESSES[i], NODE_PORT + i*10) for i in range(5)]
+    if len(sys.argv) >= 2:
+        uid = int(sys.argv[1])
+        values = sys.argv[2:]
 
-    nodes[0].queue.put('a', True, 1)
+        node = Node(uid, SERVER_ADDRESSES[uid], NODE_PORT + uid*10)
+        for v in values:
+            node.queue.put(v, True, 1)
 
-    nodes[1].queue.put('b', True, 1)
-    nodes[1].queue.put('c', True, 1)
-
-    for node in nodes:
         node.start()
+
+    #nodes = [Node(i, SERVER_ADDRESSES[i], NODE_PORT + i*10) for i in range(5)]
+    #
+    #nodes[0].queue.put('a', True, 1)
+    #
+    #nodes[1].queue.put('b', True, 1)
+    #nodes[1].queue.put('c', True, 1)
+    #
+    #for node in nodes:
+    #    node.start()
