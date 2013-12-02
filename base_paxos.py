@@ -28,8 +28,15 @@ ACCEPTOR_PORT = NODE_PORT + 2
 LEARNER_PORT = NODE_PORT + 3
 
 # 0, 1, 2 => California, 3 => Virginia, 4 => Oregon
-SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
+# SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
 # SERVER_ADDRESSES = ['localhost' for _ in range(5)]
+SERVER_ADDRESSES = [
+    'ec2-54-219-110-253.us-west-1.compute.amazonaws.com',
+    'ec2-54-215-98-24.us-west-1.compute.amazonaws.com',
+    'ec2-54-219-212-222.us-west-1.compute.amazonaws.com',
+    'ec2-54-205-186-30.compute-1.amazonaws.com',
+    'ec2-54-202-79-71.us-west-2.compute.amazonaws.com'
+]
 
 
 class Messenger(object):
