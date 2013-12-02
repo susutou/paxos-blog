@@ -7,6 +7,7 @@ import time
 import queue
 import threading
 import sys
+import re
 from network import Message, Server
 
 # In order for the Paxos algorithm to function, all proposal ids must be
@@ -365,6 +366,36 @@ class Node(threading.Thread):
         self.update_proposal()
 
 
+class Parser:
+    def __init__(self, owner_node):
+        self.owner = owner_node
+
+    def exec(self, command):
+        cmd_post = re.match(r'post\(.+\)', command, flags=re.IGNORECASE)
+        cmd_read = re.match(r'read\(\s*\)', command, flags=re.IGNORECASE)
+        cmd_fail = re.match(r'fail\(\s*\)', command, flags=re.IGNORECASE)
+        cmd_unfail = re.match(r'unfail\(\s*\)', command, flags=re.IGNORECASE)
+
+        if cmd_post:
+            post = cmd_post.groups()[0]
+            try:
+                self.owner.queue.put(post, True, 3)
+            except queue.Full:
+                pass
+
+        elif cmd_read:
+            pass
+
+        elif cmd_fail:
+            pass
+
+        elif cmd_unfail:
+            pass
+
+        else:
+            print('Unknown command.')
+
+
 if __name__ == '__main__':
 
     if len(sys.argv) >= 2:
@@ -377,12 +408,23 @@ if __name__ == '__main__':
 
         node.start()
 
-    #nodes = [Node(i, SERVER_ADDRESSES[i], NODE_PORT + i*10) for i in range(5)]
-    #
-    #nodes[0].queue.put('a', True, 1)
-    #
-    #nodes[1].queue.put('b', True, 1)
-    #nodes[1].queue.put('c', True, 1)
-    #
-    #for node in nodes:
-    #    node.start()
+        parser = Parser(node)
+
+        line = input('>> ')
+
+        while True:  # quit by entering exit()
+            parser.exec(line)
+            line = input('>> ')
+
+    else:
+        SERVER_ADDRESSES = ['localhost' for _ in range(5)]
+
+        nodes = [Node(i, SERVER_ADDRESSES[i], NODE_PORT + i*10) for i in range(5)]
+
+        nodes[0].queue.put('a', True, 1)
+
+        nodes[1].queue.put('b', True, 1)
+        nodes[1].queue.put('c', True, 1)
+
+        for node in nodes:
+            node.start()
