@@ -21,10 +21,14 @@ from network import Message, Server
 #
 ProposalID = collections.namedtuple('ProposalID', ['number', 'uid'])
 
-NODE_PORTS = [60000 + i*4 for i in range(5)]
-PROPOSER_PORTS = [i+1 for i in NODE_PORTS]
-ACCEPTOR_PORTS = [i+2 for i in NODE_PORTS]
-LEARNER_PORTS = [i+3 for i in NODE_PORTS]
+NODE_PORT = 60000
+PROPOSER_PORT = NODE_PORT + 1
+ACCEPTOR_PORT = NODE_PORT + 2
+LEARNER_PORT = NODE_PORT + 3
+
+# 0, 1, 2 => California, 3 => Virginia, 4 => Oregon
+# SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
+SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 
 
 class Messenger(object):
@@ -35,8 +39,11 @@ class Messenger(object):
         """
         Broadcasts a Prepare message to all Acceptors
         """
-        for port in ACCEPTOR_PORTS:
-            msg = Message(Message.MSG_PREPARE, self.owner.server.port, port, data=proposal_id)
+        for i, addr in enumerate(SERVER_ADDRESSES):
+            msg = Message(
+                Message.MSG_PREPARE, self.owner.uid,
+                (self.owner.server.address, self.owner.server.port), (addr, ACCEPTOR_PORT + i*10),
+                data=proposal_id)
             self.owner.server.send_message(msg)
 
     def send_promise(self, proposer_uid, proposal_id, previous_id, accepted_value):
@@ -44,44 +51,58 @@ class Messenger(object):
         Sends a Promise message to the specified Proposer
         """
         msg = Message(
-            Message.MSG_PROMISE, self.owner.server.port, proposer_uid, data=(proposal_id, previous_id, accepted_value))
+            Message.MSG_PROMISE, self.owner.uid,
+            (self.owner.server.address, self.owner.server.port),
+            (SERVER_ADDRESSES[proposer_uid], PROPOSER_PORT + proposer_uid*10),
+            data=(proposal_id, previous_id, accepted_value))
         self.owner.server.send_message(msg)
 
     def send_accept(self, proposal_id, proposal_value):
         """
         Broadcasts an Accept! message to all Acceptors
         """
-        for port in ACCEPTOR_PORTS:
-            msg = Message(Message.MSG_ACCEPT, self.owner.server.port, port, data=(proposal_id, proposal_value))
+        for i, addr in enumerate(SERVER_ADDRESSES):
+            msg = Message(
+                Message.MSG_ACCEPT, self.owner.uid,
+                (self.owner.server.address, self.owner.server.port), (addr, ACCEPTOR_PORT + i*10),
+                data=(proposal_id, proposal_value))
             self.owner.server.send_message(msg)
 
     def send_accepted(self, proposal_id, accepted_value):
         """
         Broadcasts an Accepted message to all Learners
         """
-        for port in LEARNER_PORTS:
-            msg = Message(Message.MSG_DECIDE, self.owner.server.port, port, data=(proposal_id, accepted_value))
+        for i, addr in enumerate(SERVER_ADDRESSES):
+            msg = Message(
+                Message.MSG_DECIDE, self.owner.uid,
+                (self.owner.server.address, self.owner.server.port), (addr, LEARNER_PORT + i*10),
+                data=(proposal_id, accepted_value))
             self.owner.server.send_message(msg)
 
     def on_resolution(self, proposal_id, value):
         """
         Called when a resolution is reached
         """
-        print('! Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
+        print('###')
+        print('Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
+        print('###')
         time.sleep(1)
 
-        for port in NODE_PORTS:
-            msg = Message(Message.MSG_STOP, self.owner.server.port, port, data=proposal_id)
+        for i, addr in enumerate(SERVER_ADDRESSES):
+            msg = Message(
+                Message.MSG_STOP, self.owner.uid,
+                (self.owner.server.address, self.owner.server.port), (addr, NODE_PORT + i*10), data=proposal_id)
             self.owner.server.send_message(msg)
 
 
 class Proposer(object):
 
-    def __init__(self, port):
+    def __init__(self, uid, addr, port):
         self.messenger = Messenger(self)
-        self.server = Server(self, port)
+        self.server = Server(self, port, address=addr)
 
-        self.proposer_uid = port
+        self.uid = uid
+        self.proposer_uid = uid
         self.quorum_size = 3
 
         self.proposed_value = None
@@ -153,9 +174,11 @@ class Proposer(object):
 
 
 class Acceptor(object):
-    def __init__(self, port):
+    def __init__(self, uid, addr, port):
         self.messenger = Messenger(self)
-        self.server = Server(self, port)
+        self.server = Server(self, port, address=addr)
+
+        self.uid = uid
 
         self.promised_id = ProposalID(-1, -1)
         self.accepted_id = ProposalID(-1, -1)
@@ -175,9 +198,9 @@ class Acceptor(object):
 
     def recv_message(self, msg):
         if msg.type == Message.MSG_PREPARE:
-            self.recv_prepare(msg.src, msg.data)  # the data is simply one tuple
+            self.recv_prepare(msg.from_uid, msg.data)  # the data is simply one tuple
         elif msg.type == Message.MSG_ACCEPT:
-            self.recv_accept_request(msg.src, msg.data[0], msg.data[1])
+            self.recv_accept_request(msg.from_uid, msg.data[0], msg.data[1])
 
     def recv_prepare(self, from_uid, proposal_id):
         """
@@ -203,9 +226,11 @@ class Acceptor(object):
 
 
 class Learner(object):
-    def __init__(self, port):
+    def __init__(self, uid, addr, port):
         self.messenger = Messenger(self)
-        self.server = Server(self, port)
+        self.server = Server(self, port, address=addr)
+
+        self.uid = uid
 
         self.quorum_size = 3
         self.proposals = None  # maps proposal_id => [accept_count, retain_count, value]
@@ -277,18 +302,19 @@ class Learner(object):
 
 
 class Node(threading.Thread):
-    def __init__(self, port, uid):
+    def __init__(self, uid, addr, port):
         threading.Thread.__init__(self)
+        self.address = addr
         self.port = port
-        self.server = Server(self, port)
+        self.server = Server(self, port, address=addr)
         self.queue = queue.Queue()
 
         self.uid = uid
         self.next_post = None
 
-        self.proposer = Proposer(port + 1)
-        self.acceptor = Acceptor(port + 2)
-        self.learner = Learner(port + 3)
+        self.proposer = Proposer(uid, addr, port + 1)
+        self.acceptor = Acceptor(uid, addr, port + 2)
+        self.learner = Learner(uid, addr, port + 3)
 
         self.stopped_proposal_id = None
 
@@ -311,11 +337,11 @@ class Node(threading.Thread):
                 self.acceptor.reset()
                 self.learner.reset()
 
-                time.sleep(1)
+                time.sleep(3)
 
                 proposer_uid = msg.data.uid
 
-                if proposer_uid == self.uid + 1:
+                if proposer_uid == self.uid:
                     self.update_proposal()
                 elif self.next_post is not None:
                     print('Propose old value {}'.format(self.next_post))
@@ -333,7 +359,7 @@ class Node(threading.Thread):
 
 if __name__ == '__main__':
 
-    nodes = [Node(port, port) for port in NODE_PORTS]
+    nodes = [Node(i, SERVER_ADDRESSES[i], NODE_PORT + i*10) for i in range(5)]
 
     nodes[0].queue.put('a', True, 1)
 
