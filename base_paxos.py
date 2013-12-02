@@ -4,6 +4,8 @@ Initial import from essential Paxos
 import collections
 import pickle
 import time
+import queue
+import threading
 from network import Message, Server
 
 # In order for the Paxos algorithm to function, all proposal ids must be
@@ -18,9 +20,11 @@ from network import Message, Server
 # "proposal_id.number" instead of "proposal_id[0]".
 #
 ProposalID = collections.namedtuple('ProposalID', ['number', 'uid'])
-acceptor_ports = [60000+i for i in range(5)]
-learner_ports = [60000+i for i in range(5, 10)]
-proposer_ports = [60000+i for i in range(10, 12)]
+
+NODE_PORTS = [60000 + i*4 for i in range(5)]
+PROPOSER_PORTS = [i+1 for i in NODE_PORTS]
+ACCEPTOR_PORTS = [i+2 for i in NODE_PORTS]
+LEARNER_PORTS = [i+3 for i in NODE_PORTS]
 
 
 class Messenger(object):
@@ -31,7 +35,7 @@ class Messenger(object):
         """
         Broadcasts a Prepare message to all Acceptors
         """
-        for port in acceptor_ports:
+        for port in ACCEPTOR_PORTS:
             msg = Message(Message.MSG_PREPARE, self.owner.server.port, port, data=proposal_id)
             self.owner.server.send_message(msg)
 
@@ -47,7 +51,7 @@ class Messenger(object):
         """
         Broadcasts an Accept! message to all Acceptors
         """
-        for port in acceptor_ports:
+        for port in ACCEPTOR_PORTS:
             msg = Message(Message.MSG_ACCEPT, self.owner.server.port, port, data=(proposal_id, proposal_value))
             self.owner.server.send_message(msg)
 
@@ -55,7 +59,7 @@ class Messenger(object):
         """
         Broadcasts an Accepted message to all Learners
         """
-        for port in learner_ports:
+        for port in LEARNER_PORTS:
             msg = Message(Message.MSG_DECIDE, self.owner.server.port, port, data=(proposal_id, accepted_value))
             self.owner.server.send_message(msg)
 
@@ -63,7 +67,12 @@ class Messenger(object):
         """
         Called when a resolution is reached
         """
-        print('\n! Value {v} is accepted by {o}, proposed by {pid}.\n'.format(v=value, o=self.owner, pid=proposal_id))
+        print('! Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
+        time.sleep(2)
+
+        for port in NODE_PORTS:
+            msg = Message(Message.MSG_STOP, self.owner.server.port, port, data=proposal_id)
+            self.owner.server.send_message(msg)
 
 
 class Proposer(object):
@@ -79,6 +88,13 @@ class Proposer(object):
         self.proposal_id = None
         self.last_accepted_id = (-1, -1)
         self.next_proposal_number = 1
+        self.promises_rcvd = None
+
+    def reset(self):
+        self.proposed_value = None
+        self.proposal_id = None
+        self.last_accepted_id = (-1, -1)
+        # self.next_proposal_number = 1
         self.promises_rcvd = None
 
     def start(self):
@@ -144,6 +160,14 @@ class Acceptor(object):
         self.accepted_id = ProposalID(-1, -1)
         self.accepted_value = None
 
+    def reset(self):
+        # self.messenger = Messenger(self)
+        # self.server = Server(self, port)
+
+        self.promised_id = ProposalID(-1, -1)
+        self.accepted_id = ProposalID(-1, -1)
+        self.accepted_value = None
+
     def start(self):
         self.server.start()
 
@@ -182,6 +206,12 @@ class Learner(object):
         self.server = Server(self, port)
 
         self.quorum_size = 3
+        self.proposals = None  # maps proposal_id => [accept_count, retain_count, value]
+        self.acceptors = None  # maps from_uid => last_accepted_proposal_id
+        self.final_value = None
+        self.final_proposal_id = None
+
+    def reset(self):
         self.proposals = None  # maps proposal_id => [accept_count, retain_count, value]
         self.acceptors = None  # maps from_uid => last_accepted_proposal_id
         self.final_value = None
@@ -242,27 +272,85 @@ class Learner(object):
             self.messenger.on_resolution(proposal_id, accepted_value)
 
 
+class Node(threading.Thread):
+    def __init__(self, port, uid):
+        threading.Thread.__init__(self)
+        self.port = port
+        self.server = Server(self, port)
+        self.queue = queue.Queue()
+
+        self.uid = uid
+        self.next_post = None
+
+        self.proposer = Proposer(port + 1)
+        self.acceptor = Acceptor(port + 2)
+        self.learner = Learner(port + 3)
+
+        self.stopped_proposal_id = None
+
+    def update_proposal(self):
+        try:
+            self.next_post = self.queue.get(True, 1)
+            self.proposer.set_proposal(self.next_post)
+            self.proposer.prepare()
+            print('New post {} is updated.'.format(self.next_post))
+        except queue.Empty:
+            self.next_post = None
+
+    def recv_message(self, msg):
+        if msg.type == Message.MSG_STOP and msg.data.number != self.stopped_proposal_id:
+            self.stopped_proposal_id = msg.data.number
+            self.proposer.reset()
+            self.acceptor.reset()
+            self.learner.reset()
+
+            proposer_uid = msg.data.uid
+
+            if proposer_uid == self.uid + 1:
+                self.update_proposal()
+            elif self.next_post is not None:
+                print('Propose old value {}'.format(self.next_post))
+                self.proposer.set_proposal(self.next_post)
+                self.proposer.prepare()
+
+    def run(self):
+        self.server.start()
+        self.proposer.start()
+        self.acceptor.start()
+        self.learner.start()
+
+        self.update_proposal()
+
+
 if __name__ == '__main__':
-    proposers = [Proposer(port) for port in proposer_ports]
-    acceptors = [Acceptor(port) for port in acceptor_ports]
-    learners = [Learner(port) for port in learner_ports]
+    #proposers = [Proposer(port) for port in PROPOSER_PORTS]
+    #acceptors = [Acceptor(port) for port in ACCEPTOR_PORTS]
+    #learners = [Learner(port) for port in LEARNER_PORTS]
+    #
+    #for proposer in proposers:
+    #    proposer.start()
+    #
+    #for acceptor in acceptors:
+    #    acceptor.start()
+    #
+    #for learner in learners:
+    #    learner.start()
+    #
+    #proposers[0].set_proposal('p1')
+    #proposers[1].set_proposal('p2')
+    #
+    #proposers[0].prepare()
+    #proposers[1].prepare()
 
-    for proposer in proposers:
-        proposer.start()
+    nodes = [Node(port, port) for port in NODE_PORTS]
 
-    for acceptor in acceptors:
-        acceptor.start()
+    nodes[0].queue.put('a', True, 1)
 
-    for learner in learners:
-        learner.start()
+    nodes[1].queue.put('b', True, 1)
+    nodes[1].queue.put('c', True, 1)
 
-    proposers[0].set_proposal('p1')
-    proposers[1].set_proposal('p2')
-
-    proposers[0].prepare()
-    proposers[1].prepare()
-
-    time.sleep(5)
-
-    proposers[0].set_proposal('p1-x')
-    proposers[0].prepare()
+    nodes[0].start()
+    nodes[1].start()
+    nodes[2].start()
+    nodes[3].start()
+    nodes[4].start()
