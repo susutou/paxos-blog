@@ -16,8 +16,9 @@ class Message(object):
     MSG_PROMISE = 1
     MSG_ACCEPT = 2
     MSG_DECIDE = 3
+    MSG_STOP = 4
 
-    MSG_TYPE = ['MSG_PREPARE', 'MSG_PROMISE', 'MSG_ACCEPT', 'MSG_DECIDE']
+    MSG_TYPE = ['MSG_PREPARE', 'MSG_PROMISE', 'MSG_ACCEPT', 'MSG_DECIDE', 'MSG_STOP']
 
     def __init__(self, message_type, src, to, data=None):
         self.type = message_type
@@ -66,8 +67,8 @@ class Server(threading.Thread):
         while not self.abort:
             message = self.wait_for_message()
             if message is not None and isinstance(message, Message):
-                print('Server at port {port} receiving message {msg}.'.format(port=self.port, msg=message))
-                print('Message type: {t}, content: {c}'.format(t=Message.MSG_TYPE[message.type], c=message.data))
+                # print('Server at port {port} receiving message {msg}.'.format(port=self.port, msg=message))
+                # print('Message type: {t}, content: {c}'.format(t=Message.MSG_TYPE[message.type], c=message.data))
 
                 # let the owner keep receiving message and decide what to do
                 self.owner.recv_message(message)
@@ -83,7 +84,8 @@ class Server(threading.Thread):
     def send_message(self, message):
         data = pickle.dumps(message)
         address = (self.address, message.to)
-        time.sleep(0.01 * random.randrange(0, 10))
+        r = random.Random(time.clock())
+        time.sleep(0.01 * r.randrange(0, 10))
         self.socket.sendto(data, address)
         # success
         return True
