@@ -68,7 +68,7 @@ class Messenger(object):
         Called when a resolution is reached
         """
         print('! Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
-        time.sleep(2)
+        time.sleep(1)
 
         for port in NODE_PORTS:
             msg = Message(Message.MSG_STOP, self.owner.server.port, port, data=proposal_id)
@@ -91,6 +91,7 @@ class Proposer(object):
         self.promises_rcvd = None
 
     def reset(self):
+        self.server.queue = queue.Queue()
         self.proposed_value = None
         self.proposal_id = None
         self.last_accepted_id = (-1, -1)
@@ -163,6 +164,7 @@ class Acceptor(object):
     def reset(self):
         # self.messenger = Messenger(self)
         # self.server = Server(self, port)
+        self.server.queue = queue.Queue()
 
         self.promised_id = ProposalID(-1, -1)
         self.accepted_id = ProposalID(-1, -1)
@@ -212,6 +214,8 @@ class Learner(object):
         self.final_proposal_id = None
 
     def reset(self):
+        self.server.queue = queue.Queue()
+
         self.proposals = None  # maps proposal_id => [accept_count, retain_count, value]
         self.acceptors = None  # maps from_uid => last_accepted_proposal_id
         self.final_value = None
@@ -288,30 +292,35 @@ class Node(threading.Thread):
 
         self.stopped_proposal_id = None
 
+        self.lock = threading.Lock()
+
     def update_proposal(self):
         try:
             self.next_post = self.queue.get(True, 1)
+            print('Propose next available value {}.'.format(self.next_post))
             self.proposer.set_proposal(self.next_post)
             self.proposer.prepare()
-            print('New post {} is updated.'.format(self.next_post))
         except queue.Empty:
             self.next_post = None
 
     def recv_message(self, msg):
-        if msg.type == Message.MSG_STOP and msg.data.number != self.stopped_proposal_id:
-            self.stopped_proposal_id = msg.data.number
-            self.proposer.reset()
-            self.acceptor.reset()
-            self.learner.reset()
+        with self.lock:
+            if msg.type == Message.MSG_STOP and msg.data.number != self.stopped_proposal_id:
+                self.stopped_proposal_id = msg.data.number
+                self.proposer.reset()
+                self.acceptor.reset()
+                self.learner.reset()
 
-            proposer_uid = msg.data.uid
+                time.sleep(1)
 
-            if proposer_uid == self.uid + 1:
-                self.update_proposal()
-            elif self.next_post is not None:
-                print('Propose old value {}'.format(self.next_post))
-                self.proposer.set_proposal(self.next_post)
-                self.proposer.prepare()
+                proposer_uid = msg.data.uid
+
+                if proposer_uid == self.uid + 1:
+                    self.update_proposal()
+                elif self.next_post is not None:
+                    print('Propose old value {}'.format(self.next_post))
+                    self.proposer.set_proposal(self.next_post)
+                    self.proposer.prepare()
 
     def run(self):
         self.server.start()
@@ -323,24 +332,6 @@ class Node(threading.Thread):
 
 
 if __name__ == '__main__':
-    #proposers = [Proposer(port) for port in PROPOSER_PORTS]
-    #acceptors = [Acceptor(port) for port in ACCEPTOR_PORTS]
-    #learners = [Learner(port) for port in LEARNER_PORTS]
-    #
-    #for proposer in proposers:
-    #    proposer.start()
-    #
-    #for acceptor in acceptors:
-    #    acceptor.start()
-    #
-    #for learner in learners:
-    #    learner.start()
-    #
-    #proposers[0].set_proposal('p1')
-    #proposers[1].set_proposal('p2')
-    #
-    #proposers[0].prepare()
-    #proposers[1].prepare()
 
     nodes = [Node(port, port) for port in NODE_PORTS]
 
@@ -349,8 +340,5 @@ if __name__ == '__main__':
     nodes[1].queue.put('b', True, 1)
     nodes[1].queue.put('c', True, 1)
 
-    nodes[0].start()
-    nodes[1].start()
-    nodes[2].start()
-    nodes[3].start()
-    nodes[4].start()
+    for node in nodes:
+        node.start()

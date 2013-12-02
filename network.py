@@ -67,8 +67,8 @@ class Server(threading.Thread):
         while not self.abort:
             message = self.wait_for_message()
             if message is not None and isinstance(message, Message):
-                # print('Server at port {port} receiving message {msg}.'.format(port=self.port, msg=message))
-                # print('Message type: {t}, content: {c}'.format(t=Message.MSG_TYPE[message.type], c=message.data))
+                #print('Server at port {port} receiving message {msg} from {src}.'.format(port=self.port, msg=message, src=message.src))
+                #print('Message type: {t}, content: {c}'.format(t=Message.MSG_TYPE[message.type], c=message.data))
 
                 # let the owner keep receiving message and decide what to do
                 self.owner.recv_message(message)
