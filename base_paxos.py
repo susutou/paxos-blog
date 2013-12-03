@@ -382,6 +382,7 @@ class Node(threading.Thread):
 
 class Parser(threading.Thread):
     def __init__(self, owner_node):
+        threading.Thread.__init__(self)
         self.owner = owner_node
 
     def exec(self, command):
