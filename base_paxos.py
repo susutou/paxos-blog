@@ -311,6 +311,16 @@ class Learner(object):
 
 
 class Node(threading.Thread):
+    class CommandListener(threading.Thread):
+        def __init__(self, owner):
+            self.owner = owner
+
+        def run(self):
+            while True:
+                with self.owner.lock:
+                    if self.owner.last_decided_proposer_id == self.owner.uid:
+                        pass
+
     def __init__(self, uid, addr, port):
         threading.Thread.__init__(self)
         self.address = addr
@@ -329,9 +339,11 @@ class Node(threading.Thread):
 
         self.lock = threading.Lock()
 
+        self.last_decided_proposer_id = None
+
     def update_proposal(self):
         try:
-            self.next_post = self.queue.get(True, 1)
+            self.next_post = self.queue.get(True)
             print('Propose next available value {}.'.format(self.next_post))
             self.proposer.set_proposal(self.next_post)
             self.proposer.prepare()
@@ -345,6 +357,8 @@ class Node(threading.Thread):
                 self.proposer.reset()
                 self.acceptor.reset()
                 self.learner.reset()
+
+                # self.last_decided_proposer_id = msg.data.uid
 
                 time.sleep(3)
 
