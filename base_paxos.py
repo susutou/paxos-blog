@@ -32,11 +32,11 @@ LEARNER_PORT = NODE_PORT + 3
 # SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
 # SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 SERVER_ADDRESSES = [
-    'ec2-54-219-110-253.us-west-1.compute.amazonaws.com',
-    'ec2-54-215-98-24.us-west-1.compute.amazonaws.com',
-    'ec2-54-219-212-222.us-west-1.compute.amazonaws.com',
-    'ec2-54-205-186-30.compute-1.amazonaws.com',
-    'ec2-54-202-79-71.us-west-2.compute.amazonaws.com'
+    'ec2-54-219-110-253.us-west-1.compute.amazonaws.com',   # california
+    'ec2-54-228-140-212.eu-west-1.compute.amazonaws.com',   # ireland
+    'ec2-54-251-85-148.ap-southeast-1.compute.amazonaws.com',   # singapore
+    'ec2-54-205-186-30.compute-1.amazonaws.com',            # virginia
+    'ec2-54-202-79-71.us-west-2.compute.amazonaws.com'      # oregon
 ]
 
 
@@ -342,7 +342,7 @@ class Node(threading.Thread):
         self.next_post = None
 
         # local log of the Node
-        self.log = dict()
+        self.log = []
 
         self.proposer = Proposer(uid, addr, port + 1)
         self.acceptor = Acceptor(uid, addr, port + 2)
@@ -365,11 +365,13 @@ class Node(threading.Thread):
                 # set local log
                 accepted_log = msg.data[2]
                 if len(accepted_log) > len(self.log):
-                    for key in accepted_log:
-                        if key not in self.log:
-                            self.log[key] = accepted_log[key]
+                    self.log = accepted_log
 
-                self.log[msg.data[0]] = msg.data[1]
+                if len(self.log) > 0:
+                    if self.log[-1] != msg.data[1]:
+                        self.log.append(msg.data[1])
+                else:
+                    self.log.append(msg.data[1])
 
                 print('Log after this round: ', self.log)
 
