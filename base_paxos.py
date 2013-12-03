@@ -371,7 +371,7 @@ class Parser:
         self.owner = owner_node
 
     def exec(self, command):
-        cmd_post = re.match(r'post\(.+\)', command, flags=re.IGNORECASE)
+        cmd_post = re.match(r'post\((.+)\)', command, flags=re.IGNORECASE)
         cmd_read = re.match(r'read\(\s*\)', command, flags=re.IGNORECASE)
         cmd_fail = re.match(r'fail\(\s*\)', command, flags=re.IGNORECASE)
         cmd_unfail = re.match(r'unfail\(\s*\)', command, flags=re.IGNORECASE)
