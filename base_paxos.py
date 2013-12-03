@@ -311,15 +311,24 @@ class Learner(object):
 
 
 class Node(threading.Thread):
-    class CommandListener(threading.Thread):
+    class Daemon(threading.Thread):
         def __init__(self, owner):
+            threading.Thread.__init__(self)
             self.owner = owner
 
         def run(self):
             while True:
-                with self.owner.lock:
-                    if self.owner.last_decided_proposer_id == self.owner.uid:
-                        pass
+                if self.owner.in_propose_time_frame:
+                    self.owner.in_propose_time_frame = False
+                    if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:
+                        self.owner.next_post = self.owner.queue.get(True)
+                        print('Propose next available value {}.'.format(self.owner.next_post))
+                        self.owner.proposer.set_proposal(self.owner.next_post)
+                        self.owner.proposer.prepare()
+                    elif self.owner.next_post is not None:
+                        print('Propose old value {}'.format(self.owner.next_post))
+                        self.owner.proposer.set_proposal(self.owner.next_post)
+                        self.owner.proposer.prepare()
 
     def __init__(self, uid, addr, port):
         threading.Thread.__init__(self)
@@ -341,6 +350,10 @@ class Node(threading.Thread):
 
         self.last_decided_proposer_id = None
 
+        self.in_propose_time_frame = True
+
+        self.daemon = Node.Daemon(self)
+
     def update_proposal(self):
         try:
             self.next_post = self.queue.get(True)
@@ -358,18 +371,20 @@ class Node(threading.Thread):
                 self.acceptor.reset()
                 self.learner.reset()
 
-                # self.last_decided_proposer_id = msg.data.uid
+                self.last_decided_proposer_id = msg.data.uid
 
                 time.sleep(3)
 
-                proposer_uid = msg.data.uid
+                self.in_propose_time_frame = True
 
-                if proposer_uid == self.uid:
-                    self.update_proposal()
-                elif self.next_post is not None:
-                    print('Propose old value {}'.format(self.next_post))
-                    self.proposer.set_proposal(self.next_post)
-                    self.proposer.prepare()
+                #proposer_uid = msg.data.uid
+                #
+                #if proposer_uid == self.uid:
+                #    self.update_proposal()
+                #elif self.next_post is not None:
+                #    print('Propose old value {}'.format(self.next_post))
+                #    self.proposer.set_proposal(self.next_post)
+                #    self.proposer.prepare()
 
     def run(self):
         self.server.start()
@@ -377,12 +392,11 @@ class Node(threading.Thread):
         self.acceptor.start()
         self.learner.start()
 
-        self.update_proposal()
+        self.daemon.start()
 
 
-class Parser(threading.Thread):
+class Parser:
     def __init__(self, owner_node):
-        threading.Thread.__init__(self)
         self.owner = owner_node
 
     def exec(self, command):
@@ -410,12 +424,6 @@ class Parser(threading.Thread):
         else:
             print('Unknown command.')
 
-    def run(self):
-        line = input('>> ')
-
-        while True:  # quit by entering exit()
-            parser.exec(line)
-            line = input('>> ')
 
 if __name__ == '__main__':
 
@@ -430,7 +438,12 @@ if __name__ == '__main__':
         node.start()
 
         parser = Parser(node)
-        parser.start()
+
+        line = input('>> ')
+
+        while True:  # quit by entering exit()
+            parser.exec(line)
+            line = input('>> ')
 
     else:
         SERVER_ADDRESSES = ['localhost' for _ in range(5)]
