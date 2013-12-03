@@ -88,7 +88,7 @@ class Messenger(object):
                 data=(proposal_id, accepted_value))
             self.owner.server.send_message(msg)
 
-    def on_resolution(self, proposal_id, value):
+    def on_resolution(self, proposal_id, value, log=None):
         """
         Called when a resolution is reached
         """
@@ -100,7 +100,7 @@ class Messenger(object):
         for i, addr in enumerate(SERVER_ADDRESSES):
             msg = Message(
                 Message.MSG_STOP, self.owner.uid,
-                (self.owner.server.address, self.owner.server.port), (addr, NODE_PORT + i*10), data=proposal_id)
+                (self.owner.server.address, self.owner.server.port), (addr, NODE_PORT + i*10), data=(proposal_id, value, log))
             self.owner.server.send_message(msg)
 
 
@@ -235,10 +235,11 @@ class Acceptor(object):
 
 
 class Learner(object):
-    def __init__(self, uid, addr, port):
+    def __init__(self, owner, uid, addr, port):
         self.messenger = Messenger(self)
         self.server = Server(self, port, address=addr)
 
+        self.owner = owner
         self.uid = uid
 
         self.quorum_size = 3
@@ -307,7 +308,7 @@ class Learner(object):
             self.proposals = None
             self.acceptors = None
 
-            self.messenger.on_resolution(proposal_id, accepted_value)
+            self.messenger.on_resolution(proposal_id, accepted_value, self.owner.log)
 
 
 class Node(threading.Thread):
@@ -340,9 +341,12 @@ class Node(threading.Thread):
         self.uid = uid
         self.next_post = None
 
+        # local log of the Node
+        self.log = dict()
+
         self.proposer = Proposer(uid, addr, port + 1)
         self.acceptor = Acceptor(uid, addr, port + 2)
-        self.learner = Learner(uid, addr, port + 3)
+        self.learner = Learner(self, uid, addr, port + 3)
 
         self.stopped_proposal_id = None
 
@@ -354,37 +358,31 @@ class Node(threading.Thread):
 
         self.daemon = Node.Daemon(self)
 
-    def update_proposal(self):
-        try:
-            self.next_post = self.queue.get(True)
-            print('Propose next available value {}.'.format(self.next_post))
-            self.proposer.set_proposal(self.next_post)
-            self.proposer.prepare()
-        except queue.Empty:
-            self.next_post = None
-
     def recv_message(self, msg):
         with self.lock:
-            if msg.type == Message.MSG_STOP and msg.data.number != self.stopped_proposal_id:
-                self.stopped_proposal_id = msg.data.number
+            if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
+
+                # set local log
+                accepted_log = msg.data[2]
+                if len(accepted_log) > len(self.log):
+                    for key in accepted_log:
+                        if key not in self.log:
+                            self.log[key] = accepted_log[key]
+
+                self.log[msg.data[0].number] = msg.data[1]
+
+                print('Log after this round: ', self.log)
+
+                self.stopped_proposal_id = msg.data[0].number
                 self.proposer.reset()
                 self.acceptor.reset()
                 self.learner.reset()
 
-                self.last_decided_proposer_id = msg.data.uid
+                self.last_decided_proposer_id = msg.data[0].uid
 
                 time.sleep(3)
 
                 self.in_propose_time_frame = True
-
-                #proposer_uid = msg.data.uid
-                #
-                #if proposer_uid == self.uid:
-                #    self.update_proposal()
-                #elif self.next_post is not None:
-                #    print('Propose old value {}'.format(self.next_post))
-                #    self.proposer.set_proposal(self.next_post)
-                #    self.proposer.prepare()
 
     def run(self):
         self.server.start()
@@ -395,7 +393,7 @@ class Node(threading.Thread):
         self.daemon.start()
 
 
-class Parser:
+class CLI:
     def __init__(self, owner_node):
         self.owner = owner_node
 
@@ -437,7 +435,7 @@ if __name__ == '__main__':
 
         node.start()
 
-        parser = Parser(node)
+        parser = CLI(node)
 
         line = input('>> ')
 
