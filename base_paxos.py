@@ -369,7 +369,7 @@ class Node(threading.Thread):
                         if key not in self.log:
                             self.log[key] = accepted_log[key]
 
-                self.log[msg.data[0].number] = msg.data[1]
+                self.log[msg.data[0]] = msg.data[1]
 
                 print('Log after this round: ', self.log)
 
