@@ -380,7 +380,7 @@ class Node(threading.Thread):
         self.update_proposal()
 
 
-class Parser:
+class Parser(threading.Thread):
     def __init__(self, owner_node):
         self.owner = owner_node
 
@@ -409,6 +409,12 @@ class Parser:
         else:
             print('Unknown command.')
 
+    def run(self):
+        line = input('>> ')
+
+        while True:  # quit by entering exit()
+            parser.exec(line)
+            line = input('>> ')
 
 if __name__ == '__main__':
 
@@ -423,12 +429,7 @@ if __name__ == '__main__':
         node.start()
 
         parser = Parser(node)
-
-        line = input('>> ')
-
-        while True:  # quit by entering exit()
-            parser.exec(line)
-            line = input('>> ')
+        parser.start()
 
     else:
         SERVER_ADDRESSES = ['localhost' for _ in range(5)]
