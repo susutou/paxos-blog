@@ -95,7 +95,7 @@ class Server(threading.Thread):
         data = pickle.dumps(message)
         address = message.to
         r = random.Random(time.clock())
-        time.sleep(0.01 * r.randrange(0, 10))
+        time.sleep(0.1 * r.randrange(0, 10))
         self.socket.sendto(data, address)
         # success
         return True

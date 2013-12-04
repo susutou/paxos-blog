@@ -95,7 +95,7 @@ class Messenger(object):
         print('###')
         print('Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
         print('###')
-        time.sleep(1)
+        time.sleep(2)
 
         for i, addr in enumerate(SERVER_ADDRESSES):
             msg = Message(
@@ -382,32 +382,32 @@ class Node(threading.Thread):
         self.daemon = Node.Daemon(self)
 
     def recv_message(self, msg):
-        #with self.lock:
-        if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
+        with self.lock:
+            if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
 
-            # set local log
-            accepted_log = msg.data[2]
-            if len(accepted_log) > len(self.log):
-                self.log = accepted_log
+                # set local log
+                accepted_log = msg.data[2]
+                if len(accepted_log) > len(self.log):
+                    self.log = accepted_log
 
-            if len(self.log) > 0:
-                if self.log[-1] != msg.data[1]:
+                if len(self.log) > 0:
+                    if self.log[-1] != msg.data[1]:
+                        self.log.append(msg.data[1])
+                else:
                     self.log.append(msg.data[1])
-            else:
-                self.log.append(msg.data[1])
 
-            print('Log after this round: ', self.log)
+                print('Log after this round: ', self.log)
 
-            self.stopped_proposal_id = msg.data[0].number
-            self.proposer.reset()
-            self.acceptor.reset()
-            self.learner.reset()
+                self.stopped_proposal_id = msg.data[0].number
+                self.proposer.reset()
+                self.acceptor.reset()
+                self.learner.reset()
 
-            self.last_decided_proposer_id = msg.data[0].uid
+                self.last_decided_proposer_id = msg.data[0].uid
 
-            time.sleep(3)
+                time.sleep(5)
 
-            self.in_propose_time_frame = True
+                self.in_propose_time_frame = True
 
     def fail(self):
         self.proposer.fail()
