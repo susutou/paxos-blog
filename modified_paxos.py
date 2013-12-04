@@ -1,6 +1,3 @@
-"""
-Initial import from essential Paxos
-"""
 import collections
 import pickle
 import time
@@ -17,9 +14,6 @@ PROPOSER_PORT = NODE_PORT + 1
 ACCEPTOR_PORT = NODE_PORT + 2
 LEARNER_PORT = NODE_PORT + 3
 
-# 0, 1, 2 => California, 3 => Virginia, 4 => Oregon
-# SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
-# SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 SERVER_ADDRESSES = [
     'ec2-54-215-98-24.us-west-1.compute.amazonaws.com',   # california
     'ec2-54-216-85-75.eu-west-1.compute.amazonaws.com',   # ireland
@@ -29,7 +23,6 @@ SERVER_ADDRESSES = [
 ]
 
 
-# LogEntry = collections.namedtuple('LogEntry', ['uid', 'value', 'is_accepted'])
 class LogEntry(object):
     def __init__(self, uid, value, is_accepted):
         self.uid = uid
