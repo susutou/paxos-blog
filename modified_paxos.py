@@ -21,11 +21,11 @@ LEARNER_PORT = NODE_PORT + 3
 # SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
 # SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 SERVER_ADDRESSES = [
-    'ec2-54-219-110-253.us-west-1.compute.amazonaws.com',   # california
-    'ec2-54-228-140-212.eu-west-1.compute.amazonaws.com',   # ireland
-    'ec2-54-251-85-148.ap-southeast-1.compute.amazonaws.com',   # singapore
-    'ec2-54-205-186-30.compute-1.amazonaws.com',            # virginia
-    'ec2-54-202-79-71.us-west-2.compute.amazonaws.com'      # oregon
+    'ec2-54-215-98-24.us-west-1.compute.amazonaws.com',   # california
+    'ec2-54-216-85-75.eu-west-1.compute.amazonaws.com',   # ireland
+    'ec2-54-254-95-123.ap-southeast-1.compute.amazonaws.com',   # singapore
+    'ec2-54-226-134-238.compute-1.amazonaws.com',            # virginia
+    'ec2-54-203-124-14.us-west-2.compute.amazonaws.com'      # oregon
 ]
 
 
@@ -350,7 +350,8 @@ class Node(threading.Thread):
     def recv_message(self, msg):
         with self.lock:
             #if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
-            if msg.type == Message.MSG_STOP and self.server.queue.empty():
+            if msg.type == Message.MSG_STOP and not self.is_last_decided:
+                self.is_last_decided = True
                 # set local log
                 accepted_log = msg.data[2]
                 if len(accepted_log) > len(self.log):
@@ -376,10 +377,9 @@ class Node(threading.Thread):
                 self.learner.reset()
 
                 #self.last_decided_proposer_id = msg.data[0]
-                if msg.data[0] == self.uid:
-                    self.is_last_decided = True
+                #if msg.data[0] == self.uid:
 
-                time.sleep(5)
+                time.sleep(6)
 
                 self.in_propose_time_frame = True
 
@@ -469,9 +469,14 @@ if __name__ == '__main__':
 
         nodes[0].queue.put('a', True, 1)
         nodes[0].queue.put('b', True, 1)
+        nodes[0].queue.put('c', True, 1)
 
-        nodes[1].queue.put('b', True, 1)
-        nodes[1].queue.put('d', True, 1)
+        nodes[1].queue.put('x', True, 1)
+        nodes[1].queue.put('y', True, 1)
+
+        nodes[2].queue.put('u', True, 1)
+        nodes[2].queue.put('v', True, 1)
+        nodes[2].queue.put('w', True, 1)
 
         for node in nodes:
             node.start()
