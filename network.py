@@ -39,9 +39,7 @@ class Server(threading.Thread):
             threading.Thread.__init__(self)
 
         def run(self):
-            while True:
-                if self.owner.abort:
-                    continue
+            while not self.owner.abort:
 
                 try:
                     (data, addr) = self.owner.socket.recvfrom(2048)
@@ -71,10 +69,7 @@ class Server(threading.Thread):
 
     def run(self):
         self.listener.start()
-        while True:
-            if self.abort:
-                continue
-
+        while not self.abort:
             message = self.wait_for_message()
             if message is not None and isinstance(message, Message):
                 # print('Server at port {port} receiving message {msg} from {src}.'.format(port=self.port, msg=message, src=message.src))
