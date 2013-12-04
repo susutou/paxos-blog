@@ -134,6 +134,11 @@ class Proposer(object):
     def fail(self):
         self.server.do_abort()
 
+    def recover(self):
+        self.reset()
+        self.server.abort = False
+        self.server.start()
+
     def set_proposal(self, value):
         """
         Sets the proposal value for this node iff this node is not already aware of
@@ -205,6 +210,14 @@ class Acceptor(object):
     def start(self):
         self.server.start()
 
+    def fail(self):
+        self.server.do_abort()
+
+    def recover(self):
+        self.reset()
+        self.server.abort = False
+        self.server.start()
+
     def recv_message(self, msg):
         if msg.type == Message.MSG_PREPARE:
             self.recv_prepare(msg.from_uid, msg.data)  # the data is simply one tuple
@@ -257,6 +270,14 @@ class Learner(object):
         self.final_proposal_id = None
 
     def start(self):
+        self.server.start()
+
+    def fail(self):
+        self.server.do_abort()
+
+    def recover(self):
+        self.reset()
+        self.server.abort = False
         self.server.start()
 
     @property
@@ -318,7 +339,7 @@ class Node(threading.Thread):
             self.owner = owner
 
         def run(self):
-            while True:
+            while not self.owner.abort:
                 if self.owner.in_propose_time_frame:
                     self.owner.in_propose_time_frame = False
                     if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:
@@ -337,6 +358,8 @@ class Node(threading.Thread):
         self.port = port
         self.server = Server(self, port, address=addr)
         self.queue = queue.Queue()
+
+        self.abort = False
 
         self.uid = uid
         self.next_post = None
@@ -386,6 +409,23 @@ class Node(threading.Thread):
 
                 self.in_propose_time_frame = True
 
+    def fail(self):
+        self.proposer.fail()
+        self.acceptor.fail()
+        self.learner.fail()
+
+        self.abort = True
+        self.server.do_abort()
+
+    def recover(self):
+        self.abort = False
+        self.server.start()
+        self.proposer.recover()
+        self.acceptor.recover()
+        self.learner.recover()
+
+        self.daemon.start()
+
     def run(self):
         self.server.start()
         self.proposer.start()
@@ -413,13 +453,14 @@ class CLI:
                 pass
 
         elif cmd_read:
-            pass
+            print('The micro blog posts on this site are:')
+            print(self.owner.log)
 
         elif cmd_fail:
-            pass
+            self.owner.fail()
 
         elif cmd_unfail:
-            pass
+            self.owner.recover()
 
         else:
             print('Unknown command.')
