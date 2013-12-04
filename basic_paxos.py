@@ -95,7 +95,7 @@ class Messenger(object):
         print('###')
         print('Value {v} is accepted by {o}, proposed by {pid}.'.format(v=value, o=self.owner.server.port, pid=proposal_id))
         print('###')
-        time.sleep(1)
+        time.sleep(2)
 
         for i, addr in enumerate(SERVER_ADDRESSES):
             msg = Message(
@@ -297,18 +297,18 @@ class Learner(object):
             self.proposals = dict()
             self.acceptors = dict()
 
-        last_pn = self.acceptors.get(from_uid)
+        last_proposal_number = self.acceptors.get(from_uid)
 
-        if last_pn is not None and not proposal_id > last_pn:
+        if last_proposal_number is not None and not proposal_id > last_proposal_number:
             return  # Old message
 
         self.acceptors[from_uid] = proposal_id
 
-        if last_pn is not None:
-            oldp = self.proposals[last_pn]
-            oldp[1] -= 1
-            if oldp[1] == 0:
-                del self.proposals[last_pn]
+        if last_proposal_number is not None:
+            old_proposal = self.proposals[last_proposal_number]
+            old_proposal[1] -= 1
+            if old_proposal[1] == 0:
+                del self.proposals[last_proposal_number]
 
         if not proposal_id in self.proposals:
             self.proposals[proposal_id] = [0, 0, accepted_value]
@@ -337,9 +337,6 @@ class Node(threading.Thread):
 
         def run(self):
             while True:
-                if self.owner.abort:
-                    continue
-
                 if self.owner.in_propose_time_frame:
                     self.owner.in_propose_time_frame = False
                     if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:

@@ -40,7 +40,7 @@ class LogEntry(object):
         return self.uid == other.uid and self.value == other.value and self.is_accepted == other.is_accepted
 
     def __str__(self):
-        return str('<{u}, {v}, {acc}>'.format(u=self.uid, v=self.value, acc=self.is_accepted))
+        return str('<uid={u}, value={v}>'.format(u=self.uid, v=self.value))
 
 
 class Messenger(object):
@@ -254,6 +254,7 @@ class Learner(object):
 
         if self.proposals is None:
             self.proposals = dict()
+            self.proposals[self.uid] = 1
             self.acceptors = dict()
 
         if from_uid in self.acceptors:
@@ -272,9 +273,13 @@ class Learner(object):
 
         if self.proposals[proposal_uid] == self.quorum_size:
             accepted_value_tuple = LogEntry(proposal_uid, accepted_value, False)
+            accepted_value_tuple_true = LogEntry(proposal_uid, accepted_value, True)
             is_found = False
             i = len(self.owner.log) - 1
             while i >= 0:
+                if self.owner.log[i] == accepted_value_tuple_true:
+                    is_found = True
+
                 if self.owner.log[i] == accepted_value_tuple:
                     self.owner.log[i].is_accepted = True
                     is_found = True
@@ -350,7 +355,8 @@ class Node(threading.Thread):
     def recv_message(self, msg):
         with self.lock:
             #if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
-            if msg.type == Message.MSG_STOP and self.server.queue.empty():
+            if msg.type == Message.MSG_STOP and not self.is_last_decided:
+                self.is_last_decided = True
                 # set local log
                 accepted_log = msg.data[2]
                 if len(accepted_log) > len(self.log):
@@ -363,12 +369,12 @@ class Node(threading.Thread):
 
                     i -= 1
 
-                print('Log after this round on site {}: '.format(self.uid))
-                print('[', end='')
-                for log_entry in self.log:
-                    print(log_entry, end=', ')
-
-                print(']\n')
+                #print('Log after this round on site {}: '.format(self.uid))
+                #print('[', end='')
+                #for log_entry in self.log:
+                #    print(log_entry, end=', ')
+                #
+                #print(']\n')
 
                 # self.stopped_proposal_id = msg.data[0].number
                 self.proposer.reset()
@@ -376,10 +382,9 @@ class Node(threading.Thread):
                 self.learner.reset()
 
                 #self.last_decided_proposer_id = msg.data[0]
-                if msg.data[0] == self.uid:
-                    self.is_last_decided = True
+                #if msg.data[0] == self.uid:
 
-                time.sleep(5)
+                time.sleep(6)
 
                 self.in_propose_time_frame = True
 
@@ -427,7 +432,11 @@ class CLI:
 
         elif cmd_read:
             print('The micro blog posts on this site are:')
-            print(self.owner.log)
+            print('[', end='')
+            for log_entry in self.owner.log:
+                print(log_entry, end=', ')
+
+            print(']\n')
 
         elif cmd_fail:
             self.owner.fail()
@@ -469,9 +478,14 @@ if __name__ == '__main__':
 
         nodes[0].queue.put('a', True, 1)
         nodes[0].queue.put('b', True, 1)
+        nodes[0].queue.put('c', True, 1)
 
-        nodes[1].queue.put('b', True, 1)
-        nodes[1].queue.put('d', True, 1)
+        nodes[1].queue.put('x', True, 1)
+        nodes[1].queue.put('y', True, 1)
+
+        nodes[2].queue.put('u', True, 1)
+        nodes[2].queue.put('v', True, 1)
+        nodes[2].queue.put('w', True, 1)
 
         for node in nodes:
             node.start()
