@@ -136,8 +136,7 @@ class Proposer(object):
 
     def recover(self):
         self.reset()
-        self.server.abort = False
-        self.server.start()
+        self.server.recover()
 
     def set_proposal(self, value):
         """
@@ -215,8 +214,7 @@ class Acceptor(object):
 
     def recover(self):
         self.reset()
-        self.server.abort = False
-        self.server.start()
+        self.server.recover()
 
     def recv_message(self, msg):
         if msg.type == Message.MSG_PREPARE:
@@ -277,8 +275,7 @@ class Learner(object):
 
     def recover(self):
         self.reset()
-        self.server.abort = False
-        self.server.start()
+        self.server.recover()
 
     @property
     def complete(self):
@@ -339,7 +336,10 @@ class Node(threading.Thread):
             self.owner = owner
 
         def run(self):
-            while not self.owner.abort:
+            while True:
+                if self.owner.abort:
+                    continue
+
                 if self.owner.in_propose_time_frame:
                     self.owner.in_propose_time_frame = False
                     if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:
@@ -418,13 +418,12 @@ class Node(threading.Thread):
         self.server.do_abort()
 
     def recover(self):
-        self.abort = False
-        self.server.start()
+        self.server.recover()
         self.proposer.recover()
         self.acceptor.recover()
         self.learner.recover()
 
-        self.daemon.start()
+        self.abort = False
 
     def run(self):
         self.server.start()

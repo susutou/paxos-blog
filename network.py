@@ -39,7 +39,10 @@ class Server(threading.Thread):
             threading.Thread.__init__(self)
 
         def run(self):
-            while not self.owner.abort:
+            while True:
+                if self.owner.abort:
+                    continue
+
                 try:
                     (data, addr) = self.owner.socket.recvfrom(2048)
                     msg = pickle.loads(data)
@@ -66,7 +69,10 @@ class Server(threading.Thread):
 
     def run(self):
         self.listener.start()
-        while not self.abort:
+        while True:
+            if self.abort:
+                continue
+
             message = self.wait_for_message()
             if message is not None and isinstance(message, Message):
                 # print('Server at port {port} receiving message {msg} from {src}.'.format(port=self.port, msg=message, src=message.src))
@@ -94,6 +100,9 @@ class Server(threading.Thread):
 
     def do_abort(self):
         self.abort = True
+
+    def recover(self):
+        self.abort = False
 
 if __name__ == '__main__':
     a = Server(60000, None)
