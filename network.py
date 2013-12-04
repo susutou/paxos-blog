@@ -102,6 +102,7 @@ class Server(threading.Thread):
         self.abort = True
 
     def recover(self):
+        self.queue = queue.Queue()
         self.abort = False
 
 if __name__ == '__main__':
