@@ -367,7 +367,7 @@ class Node(threading.Thread):
 
     def recv_message(self, msg):
         with self.lock:
-            if msg.type == Message.MSG_STOP and msg.data[0].number != self.stopped_proposal_id:
+            if msg.type == Message.MSG_STOP and msg.data[0] != self.stopped_proposal_id:
 
                 # set local log
                 accepted_log = msg.data[2]
@@ -382,7 +382,7 @@ class Node(threading.Thread):
 
                 print('Log after this round: ', self.log)
 
-                self.stopped_proposal_id = msg.data[0].number
+                self.stopped_proposal_id = msg.data[0]
                 self.proposer.reset()
                 self.acceptor.reset()
                 self.learner.reset()
