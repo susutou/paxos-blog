@@ -360,7 +360,7 @@ class Node(threading.Thread):
                 # set local log
                 accepted_log = msg.data[2]
                 if len(accepted_log) > len(self.log):
-                    self.log = list(accepted_log)
+                    self.log = accepted_log
 
                 i = len(self.log) - 1
                 while i >= 0:
