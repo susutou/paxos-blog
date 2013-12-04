@@ -321,10 +321,15 @@ class Node(threading.Thread):
         def __init__(self, owner):
             threading.Thread.__init__(self)
             self.owner = owner
+            self.counter = time.time()
 
         def run(self):
             while True:
                 if self.owner.in_propose_time_frame:
+                    if time.time() - self.counter > 2:
+                        print('Daemon is alive!')
+                        self.counter = time.time()
+
                     self.owner.in_propose_time_frame = False
                     if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:
                         self.owner.next_post = self.owner.queue.get(True)
