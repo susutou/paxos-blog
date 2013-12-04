@@ -366,32 +366,31 @@ class Node(threading.Thread):
         self.daemon = Node.Daemon(self)
 
     def recv_message(self, msg):
-        with self.lock:
-            if msg.type == Message.MSG_STOP and msg.data[0] != self.stopped_proposal_id:
+        if msg.type == Message.MSG_STOP and msg.data[0] != self.stopped_proposal_id:
 
-                # set local log
-                accepted_log = msg.data[2]
-                if len(accepted_log) > len(self.log):
-                    self.log = accepted_log
+            # set local log
+            accepted_log = msg.data[2]
+            if len(accepted_log) > len(self.log):
+                self.log = accepted_log
 
-                if len(self.log) > 0:
-                    if self.log[-1] != msg.data[1]:
-                        self.log.append(msg.data[1])
-                else:
+            if len(self.log) > 0:
+                if self.log[-1] != msg.data[1]:
                     self.log.append(msg.data[1])
+            else:
+                self.log.append(msg.data[1])
 
-                print('Log after this round: ', self.log)
+            print('Log after this round: ', self.log)
 
-                self.stopped_proposal_id = msg.data[0]
-                self.proposer.reset()
-                self.acceptor.reset()
-                self.learner.reset()
+            self.stopped_proposal_id = msg.data[0]
+            self.proposer.reset()
+            self.acceptor.reset()
+            self.learner.reset()
 
-                self.last_decided_proposer_id = msg.data[0].uid
+            self.last_decided_proposer_id = msg.data[0].uid
 
-                time.sleep(3)
+            time.sleep(3)
 
-                self.in_propose_time_frame = True
+            self.in_propose_time_frame = True
 
     def fail(self):
         self.proposer.fail()
