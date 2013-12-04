@@ -104,14 +104,4 @@ class Server(threading.Thread):
         self.abort = False
 
 if __name__ == '__main__':
-    a = Server(60000, None)
-    b = Server(60001, None)
-
-    a.start()
-    b.start()
-
-    a.send_message(Message(Message.MSG_PREPARE, 'a', b.port))
-    b.send_message(Message(Message.MSG_PROMISE, 'b', a.port))
-
-    time.sleep(2)
-    b.send_message(Message(Message.MSG_ACCEPT, 'b', a.port))
+    pass
