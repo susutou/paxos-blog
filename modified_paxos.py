@@ -40,7 +40,7 @@ class LogEntry(object):
         return self.uid == other.uid and self.value == other.value and self.is_accepted == other.is_accepted
 
     def __str__(self):
-        return str('<{u}, {v}, {acc}>'.format(u=self.uid, v=self.value, acc=self.is_accepted))
+        return str('<uid={u}, value={v}>'.format(u=self.uid, v=self.value))
 
 
 class Messenger(object):
@@ -364,12 +364,12 @@ class Node(threading.Thread):
 
                     i -= 1
 
-                print('Log after this round on site {}: '.format(self.uid))
-                print('[', end='')
-                for log_entry in self.log:
-                    print(log_entry, end=', ')
-
-                print(']\n')
+                #print('Log after this round on site {}: '.format(self.uid))
+                #print('[', end='')
+                #for log_entry in self.log:
+                #    print(log_entry, end=', ')
+                #
+                #print(']\n')
 
                 # self.stopped_proposal_id = msg.data[0].number
                 self.proposer.reset()
@@ -427,7 +427,11 @@ class CLI:
 
         elif cmd_read:
             print('The micro blog posts on this site are:')
-            print(self.owner.log)
+            print('[', end='')
+            for log_entry in self.owner.log:
+                print(log_entry, end=', ')
+
+            print(']\n')
 
         elif cmd_fail:
             self.owner.fail()
