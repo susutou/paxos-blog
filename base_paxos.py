@@ -459,7 +459,10 @@ class CLI:
             self.owner.fail()
 
         elif cmd_unfail:
-            self.owner.recover()
+            old_uid = self.owner.uid
+            del self.owner
+            self.owner = Node(old_uid, SERVER_ADDRESSES[old_uid], NODE_PORT + old_uid*10)
+            self.owner.start()
 
         else:
             print('Unknown command.')

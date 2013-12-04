@@ -100,6 +100,7 @@ class Server(threading.Thread):
 
     def do_abort(self):
         self.abort = True
+        self.socket.close()
 
     def recover(self):
         self.queue = queue.Queue()
