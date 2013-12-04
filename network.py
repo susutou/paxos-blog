@@ -52,6 +52,8 @@ class Server(threading.Thread):
                     pass
                 except socket.timeout:
                     pass
+                except socket.error:
+                    pass
 
     def __init__(self, owner, port, address='localhost', timeout=2):
         threading.Thread.__init__(self)
