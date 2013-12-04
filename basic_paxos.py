@@ -1,6 +1,3 @@
-"""
-Initial import from essential Paxos
-"""
 import collections
 import pickle
 import time
@@ -10,17 +7,7 @@ import sys
 import re
 from network import Message, Server
 
-# In order for the Paxos algorithm to function, all proposal ids must be
-# unique. A simple way to ensure this is to include the proposer's UID
-# in the proposal id. This prevents the possibility of two Proposers
-# from proposing different values for the same proposal ID.
-#
-# Python tuples are a simple mechanism that allow the proposal number
-# and the UID to be combined easily and in a manner that supports
-# comparison. To simplify the code, we'll use "namedtuple" instances
-# from the collections module which allows us to write
-# "proposal_id.number" instead of "proposal_id[0]".
-#
+
 ProposalID = collections.namedtuple('ProposalID', ['number', 'uid'])
 
 NODE_PORT = 60000
