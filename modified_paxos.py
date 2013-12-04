@@ -21,11 +21,11 @@ LEARNER_PORT = NODE_PORT + 3
 # SERVER_ADDRESSES = ['54.219.110.253', '54.215.98.24', '54.219.212.222', '54.205.186.30', '54.202.79.71']
 # SERVER_ADDRESSES = ['localhost' for _ in range(5)]
 SERVER_ADDRESSES = [
-    'ec2-54-219-110-253.us-west-1.compute.amazonaws.com',   # california
-    'ec2-54-228-140-212.eu-west-1.compute.amazonaws.com',   # ireland
-    'ec2-54-251-85-148.ap-southeast-1.compute.amazonaws.com',   # singapore
-    'ec2-54-205-186-30.compute-1.amazonaws.com',            # virginia
-    'ec2-54-202-79-71.us-west-2.compute.amazonaws.com'      # oregon
+    'ec2-54-215-98-24.us-west-1.compute.amazonaws.com',   # california
+    'ec2-54-216-85-75.eu-west-1.compute.amazonaws.com',   # ireland
+    'ec2-54-254-95-123.ap-southeast-1.compute.amazonaws.com',   # singapore
+    'ec2-54-226-134-238.compute-1.amazonaws.com',            # virginia
+    'ec2-54-203-124-14.us-west-2.compute.amazonaws.com'      # oregon
 ]
 
 
