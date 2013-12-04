@@ -273,9 +273,13 @@ class Learner(object):
 
         if self.proposals[proposal_uid] == self.quorum_size:
             accepted_value_tuple = LogEntry(proposal_uid, accepted_value, False)
+            accepted_value_tuple_true = LogEntry(proposal_uid, accepted_value, True)
             is_found = False
             i = len(self.owner.log) - 1
             while i >= 0:
+                if self.owner.log[i] == accepted_value_tuple_true:
+                    is_found = True
+
                 if self.owner.log[i] == accepted_value_tuple:
                     self.owner.log[i].is_accepted = True
                     is_found = True
