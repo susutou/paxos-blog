@@ -254,6 +254,7 @@ class Learner(object):
 
         if self.proposals is None:
             self.proposals = dict()
+            self.proposals[self.uid] = 1
             self.acceptors = dict()
 
         if from_uid in self.acceptors:
