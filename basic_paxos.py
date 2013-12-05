@@ -330,6 +330,8 @@ class Node(threading.Thread):
                     #    print('Daemon is alive!')
                     #    self.counter = time.time()
 
+                    self.owner.in_propose_time_frame = False
+
                     if self.owner.last_decided_proposer_id == self.owner.uid or self.owner.next_post is None:
                         self.owner.next_post = self.owner.queue.get(True)
                         print('Propose next available value {}.'.format(self.owner.next_post))
@@ -339,8 +341,6 @@ class Node(threading.Thread):
                         print('Propose old value {}'.format(self.owner.next_post))
                         self.owner.proposer.set_proposal(self.owner.next_post)
                         self.owner.proposer.prepare()
-
-                    self.owner.in_propose_time_frame = False
 
     def __init__(self, uid, addr, port):
         threading.Thread.__init__(self)
